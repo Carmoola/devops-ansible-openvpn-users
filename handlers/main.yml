@@ -1,30 +1,44 @@
 ---
 
+- name: Generate CRL
+  shell: ./easyrsa --batch gen-crl
+    chdir=/etc/openvpn/easy-rsa/
+  notify:
+    - Restart openvpn server
+    - Backup openvpn certificates
+
+- name: Restart openvpn server
+  service:
+    name: openvpn@server
+    state: restarted
+
 - name: Backup openvpn client configs
   s3_sync:
     bucket: "{{ openvpn_backup_bucket }}"
-    key_prefix: openvpn/ovpn
+    key_prefix: "{{ openvpn_backup_prefix }}/ovpn"
     file_root: /etc/openvpn/ovpn
-    include: "*.ovpn.gpg"
     delete: yes
     region: "{{ ansible_ec2_placement_region }}"
+  when: backup_to_s3
 
 - name: Backup openvpn certificates
   s3_sync:
     bucket: "{{ openvpn_backup_bucket }}"
-    key_prefix: openvpn/easy-rsa/keys
-    file_root: /etc/openvpn/easy-rsa/keys
+    key_prefix: "{{ openvpn_backup_prefix }}/easy-rsa/pki"
+    file_root: /etc/openvpn/easy-rsa/pki
     delete: yes
     region: "{{ ansible_ec2_placement_region }}"
+  when: backup_to_s3
 
 # Handler "Backup openvpn certificates" does not always make backups for serial and index.txt
 # I guess due to veri small size of that files
 - name: Backup index and serial
   s3_sync:
     bucket: "{{ openvpn_backup_bucket }}"
-    key_prefix: openvpn/easy-rsa/keys
-    file_root: /etc/openvpn/easy-rsa/keys
+    key_prefix: "{{ openvpn_backup_prefix }}/easy-rsa/pki"
+    file_root: /etc/openvpn/easy-rsa/pki
     include: "serial,index.txt,index.txt.attr"
     delete: no
     file_change_strategy: force
     region: "{{ ansible_ec2_placement_region }}"
+  when: backup_to_s3

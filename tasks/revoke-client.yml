@@ -1,21 +1,38 @@
 # vim:ft=ansible:
 ---
 
-- name: revoke client sert
-  shell: . ./vars && ./revoke-full {{ item }}
-    chdir=/etc/openvpn/easy-rsa
+- name: "Check client cert exists"
+  stat:
+    path: "/etc/openvpn/easy-rsa/pki/issued/{{ item }}.crt"
   with_items: "{{ revoke_openvpn_users }}"
+  ignore_errors: True
+  register: revoke_certs_result
+
+- name: revoke client cert
+  shell: ./easyrsa --batch revoke {{ item.0 }}
+    chdir=/etc/openvpn/easy-rsa
+  with_together:
+    - "{{ revoke_openvpn_users }}"
+    - "{{ revoke_certs_result.results }}"
   notify:
+    - Generate CRL
     - Backup openvpn certificates
     - Backup index and serial
+  when:
+    item.1.stat.exists == True
 
 - name: delete client cert
   file:
-    path: "/etc/openvpn/easy-rsa/keys/{{ item[0] }}.{{ item[1] }}"
+    path: "/etc/openvpn/easy-rsa/pki/issued/{{ item }}.crt"
     state: absent
-  with_nested:
-    - "{{ revoke_openvpn_users }}"
-    - [ "csr", "crt", "key" ]
+  with_items: "{{ revoke_openvpn_users }}"
+  notify: Backup openvpn certificates
+
+- name: delete client key
+  file:
+    path: "/etc/openvpn/easy-rsa/pki/private/{{ item }}.key"
+    state: absent
+  with_items: "{{ revoke_openvpn_users }}"
   notify: Backup openvpn certificates
 
 - name: delete client ovpn files

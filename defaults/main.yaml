@@ -13,7 +13,9 @@ openvpn_server_proto: udp
 openvpn_daemon_user: nobody
 openvpn_daemon_group: nogroup
 
-openvpn_users_gpg_enabled: true
+openvpn_users_gpg_enabled: false
+send_to_slack: false
+send_to_vault: false
 
 # List of users to be created
 # openvpn_users:
@@ -32,3 +34,8 @@ vault_slack_token: "undefined"
 openvpn_default_slack_channel: openvpn
 
 check_for_new_users_regulary: true
+
+openvpn_backup_bucket: backup
+openvpn_backup_prefix: openvpn
+
+backup_to_s3: false

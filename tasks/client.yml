@@ -29,24 +29,14 @@
     mode: 0750
 
 - name: generate client openvpn cert and key
-  shell: . ./vars && ./pkitool {{ item.name }}
+  shell: ./easyrsa --batch build-client-full {{ item.name }} nopass
   args:
-    creates: "/etc/openvpn/easy-rsa/keys/{{ item.name }}.crt"
+    creates: "/etc/openvpn/easy-rsa/pki/issued/{{ item.name }}.crt"
     chdir: /etc/openvpn/easy-rsa
   with_items: "{{ openvpn_users }}"
   notify:
     - Backup openvpn certificates
     - Backup index and serial
-
-# Duplicate stage from main file to correct permissions for the keys directory
-# For unknown reason it is differ than 711
-- name: Create keys directory
-  file:
-    path: /etc/openvpn/easy-rsa/keys
-    state: directory
-    mode: 0711
-    owner: "{{ openvpn_daemon_user }}"
-    group: "{{ openvpn_daemon_group }}"
 
 - name: generate client ovpn file
   template:
@@ -89,11 +79,14 @@
 - name: send encrypted ovpn file to slack
   shell: /usr/local/bin/send-to-slack.sh --slack-id "{{ item.item.item.item.slack_id }}" --token "{{ vault_slack_token }}" --file "/etc/openvpn/ovpn/{{ item.item.item.item.name }}.ovpn.gpg"
   with_items: "{{ encrypt_ovpn.results }}"
-  when: item.changed
+  when:
+    - send_to_slack|bool
+    - item.changed
 
 - name: send plain ovpn file to slack
   shell: /usr/local/bin/send-to-slack.sh --slack-id "{{ item.item.slack_id }}" --token "{{ vault_slack_token }}" --file "/etc/openvpn/ovpn/{{ item.item.name }}.ovpn"
   with_items: "{{ create_ovpn.results }}"
   when:
+    - send_to_slack|bool
     - not item.item.gpg_enabled|default(openvpn_users_gpg_enabled)|bool
     - item.changed

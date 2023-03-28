@@ -1,12 +1,12 @@
 client
 <ca>
-{{ lookup('file', '/etc/openvpn/easy-rsa/keys/ca.crt') }}
+{{ lookup('file', '/etc/openvpn/easy-rsa/pki/ca.crt') }}
 </ca>
 <cert>
-{{ lookup('file', '/etc/openvpn/easy-rsa/keys/' + item.name + '.crt') }}
+{{ lookup('file', '/etc/openvpn/easy-rsa/pki/issued/' + item.name + '.crt') }}
 </cert>
 <key>
-{{ lookup('file', '/etc/openvpn/easy-rsa/keys/' + item.name + '.key') }}
+{{ lookup('file', '/etc/openvpn/easy-rsa/pki/private/' + item.name + '.key') }}
 </key>
 dev tun
 proto {{ openvpn_server_proto }}
